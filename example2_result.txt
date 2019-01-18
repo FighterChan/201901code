@@ -1,0 +1,6 @@
+frame 1 ten0/3
+frame 2 ten0/3
+frame 3 DROP
+frame 4 DROP
+frame 5 ten0/2
+frame 6 ten0/2

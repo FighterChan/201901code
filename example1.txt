@@ -1,0 +1,21 @@
+zone 1
+add-member 10.0.0.1
+add-member 20.0.0.1
+zone 2
+add-member 10.0.0.1
+add-member 30.0.0.1
+zoneset 1
+add-zone 1
+add-zone 2
+int tunnel 1
+sip = 1.1.1.1
+dip = 2.2.2.2
+add-route 20.0.0.0/24 tunnel 1
+add-arp 2.2.2.2 0000.0000.0001 ten0/1
+active zoneset 1
+input-frame 1
+sip = 10.0.0.1
+dip = 20.0.0.1
+input-frame 2
+sip = 30.0.0.1
+dip = 20.0.0.1
