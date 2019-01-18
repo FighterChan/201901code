@@ -12,7 +12,14 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "tools.h"
+
 
 int main(int argc, char **argv) {
+
+  char buf[32] = {0};
+  filename(argv[1],buf);
+  printf("%s\n",buf);
   return 0;
 }
