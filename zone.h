@@ -66,6 +66,7 @@ struct gre {
 
 struct zone_mem {
   char member[STR_LEN];
+  int id;
   struct list_head list;
 };
 
@@ -84,6 +85,7 @@ struct zoneset {
 
 struct parse {
   struct list_head zoneset_head;
+  struct list_head zone_mode_head;
   struct list_head list;
 };
 

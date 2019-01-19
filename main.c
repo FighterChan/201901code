@@ -35,7 +35,9 @@ create_parse (void)
     {
       return NULL;
     }
+  /* 设置默认链表 */
   INIT_LIST_HEAD (&p->zoneset_head);
+  INIT_LIST_HEAD (&p->zone_mode_head);
   return p;
 }
 
@@ -53,12 +55,12 @@ create_zoneset (const char (*p)[STR_LEN], void *data)
     }
   /* 初始化zone链表 */
   INIT_LIST_HEAD (&pzoneset->zone_head);
-  /* 给zone赋值ID号 */
-  pzoneset->zone_id = atoi (p[1]);
+  /* 给zoneset赋值ID号 */
+  pzoneset->id = atoi (p[1]);
   /* 添加时未激活 */
   pzoneset->active = UNACTIVE;
   /* 把zoneset节点加入链表 */
-  list_add_tail (&p->list, &parser->zoneset_head);
+  list_add_tail (&pzoneset->list, &parser->zoneset_head);
 }
 
 void
@@ -66,7 +68,7 @@ act_zoneset (const char (*p)[STR_LEN], void *data)
 {
   printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
   struct zoneset *pset, *nset;
-  list_for_each_safe(pset,nset,&parser->zoneset_head)
+  list_for_each_entry_safe(pset,nset,&parser->zoneset_head,list)
     {
       if (pset->id == atoi (p[2]))
         {
@@ -84,25 +86,13 @@ create_zone (const char (*p)[STR_LEN], void *data)
 {
   printf ("%s %s\n", p[0], p[1]);
   struct zone *pzone;
-  struct zoneset *pset, *nset;
   pzone = (struct zone *) malloc (sizeof(struct zone));
   if (pzone == NULL)
     {
       return;
     }
-  /* 初始化member链表 */
-  INIT_LIST_HEAD (&pzone->mem_head);
-  /* 给zone赋值ID号 */
   pzone->id = atoi (p[1]);
-  list_for_each_safe(pset,nset,&parser->zoneset_head)
-    {
-      /* 找到对应的zoneset */
-      if (pset->id == (int *) data[0])
-        {
-          /* 将zone节点入链 */
-          list_add_tail (&pzone->list, &pset->zone_head);
-        }
-    }
+  list_add_tail (&pzone->list, &parser->zone_mode_head);
 }
 
 void
@@ -110,7 +100,6 @@ create_member (const char (*p)[STR_LEN], void *data)
 {
   printf ("%s %s\n", p[0], p[1]);
   struct zone *pzone, *nzone;
-  struct zoneset *pset, *nset;
   struct zone_mem *pmem;
   pmem = (struct zone_mem *) malloc (sizeof(struct zone_mem));
   if (pmem == NULL)
@@ -118,16 +107,10 @@ create_member (const char (*p)[STR_LEN], void *data)
       return;
     }
   strncpy (pmem->member, p[1], strlen (p[1]));
-  list_for_each_safe(pset,nset,&parser->zoneset_head)
+  list_for_each_entry_safe(pzone,nzone,&parser->zone_mode_head,list)
     {
-      list_for_each_safe(pzone,nzone,&zone_head)
-        {
-        /* 找到对应的zoneset、zone*/
-          if (pset->id == (int *)data[0] && pzone->id == (int *)data[1])
-            {
-              list_add_tail (&pmem->list, &pzone->mem_head);
-            }
-        }
+      pmem->id = pzone->id;
+      list_add_tail (&pmem->list, &pzone->mem_head);
     }
 }
 
@@ -147,6 +130,20 @@ void
 add_zone (const char (*p)[STR_LEN], void *data)
 {
   printf ("%s %s\n", p[0], p[1]);
+  /* 将临时存放的链表转移过来 */
+  struct zoneset *pzoneset, *nzoneset;
+  struct zone *pzone, *nzone;
+  list_for_each_entry_safe(pzoneset,nzoneset,&parser->zoneset_head,list)
+    {
+      // 是否激活处理？？
+    list_for_each_entry_safe(pzone,nzone,&parser->zone_mode_head,list)
+        {
+          if (pzone->id == atoi(p[1]))
+            {
+              list_add_tail (&pzone->list,&pzoneset->zone_head);
+            }
+        }
+    }
 }
 
 void
@@ -306,7 +303,7 @@ int
 main (int argc, char **argv)
 {
   parser = create_parse ();
-  if (parse == NULL)
+  if (parser == NULL)
     {
       return -1;
     }
