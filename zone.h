@@ -6,11 +6,13 @@
 #define STR_LEN     (32)
 
 enum {
-  ADD_ZONE,
-  NO_ZONE,
+  ZONE,
   ADD_MEMBER,
   DEL_MEMBER,
-  ADD_ZONESET,
+  NO_ZONE,
+  ZONESET,
+  ADD_ZONE,
+  DEL_ZONE,
   NO_ZONESET,
   ACTIVE_ZONESET,
   ADD_INT,
@@ -19,6 +21,12 @@ enum {
   ADD_ARP,
   ACTIVE,
   INPUT_FRAME,
+};
+
+struct cmd_table {
+  char *cmd1;
+  char type;
+  void (*fun)(const char (*cmd)[STR_LEN],int num);
 };
 
 struct in_mess {
