@@ -11,6 +11,11 @@ enum {
 };
 
 enum {
+  UNACTIVE,
+  AVTIVE
+};
+
+enum {
   ZONE,
   ADD_MEMBER,
   DEL_MEMBER,
@@ -31,7 +36,7 @@ enum {
 struct cmd_table {
   char *cmd1;
   char mode;
-  void (*fun)(const char (*cmd)[STR_LEN],int type);
+  void (*fun)(const char (*cmd)[STR_LEN],void *data);
 };
 
 struct in_mess {
@@ -65,20 +70,21 @@ struct zone_mem {
 };
 
 struct zone {
-  struct zone_mem mem_body;
-  int zone_id;
+  struct list_head mem_head;
+  int id;
   struct list_head list;
 };
 
 struct zoneset {
-  struct zone zone_body;
-  int zoneset_id;
+  struct list_head zone_head;
+  int id;
   int active; /* 激活时active = 1 */
   struct list_head list;
 };
 
 struct parse {
-
+  struct list_head zoneset_head;
+  struct list_head list;
 };
 
 /* body of zone.h */
