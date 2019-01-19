@@ -6,6 +6,11 @@
 #define STR_LEN     (32)
 
 enum {
+  INPUT_FRAME_MODE,
+  GRE_MODE
+};
+
+enum {
   ZONE,
   ADD_MEMBER,
   DEL_MEMBER,
@@ -25,8 +30,8 @@ enum {
 
 struct cmd_table {
   char *cmd1;
-  char type;
-  void (*fun)(const char (*cmd)[STR_LEN],int num);
+  char mode;
+  void (*fun)(const char (*cmd)[STR_LEN],int type);
 };
 
 struct in_mess {

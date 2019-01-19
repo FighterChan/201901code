@@ -17,133 +17,147 @@
 #include "zone.h"
 
 char cmd[STR_LEN][STR_LEN];
+int ctr_type = INPUT_FRAME_MODE;
 
 void
-zone (const char (*p)[STR_LEN], int num)
+zone (const char (*p)[STR_LEN], int type)
 {
   printf ("%s %s\n", p[0], p[1]);
 }
 
 void
-add_member (const char (*p)[STR_LEN], int num)
+add_member (const char (*p)[STR_LEN], int type)
 {
   printf ("%s %s\n", p[0], p[1]);
 }
 
 void
-del_member (const char (*p)[STR_LEN], int num)
+del_member (const char (*p)[STR_LEN], int type)
 {
   printf ("%s %s\n", p[0], p[1]);
 }
 
 void
-no_zone (const char (*p)[STR_LEN], int num)
+no_zone (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-zoneset (const char (*p)[STR_LEN], int num)
+zoneset (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-add_zone (const char (*p)[STR_LEN], int num)
+add_zone (const char (*p)[STR_LEN], int type)
 {
   printf ("%s %s\n", p[0], p[1]);
 }
 
 void
-del_zone (const char (*p)[STR_LEN], int num)
+del_zone (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-nozone_set (const char (*p)[STR_LEN], int num)
+nozone_set (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-act_zoneset (const char (*p)[STR_LEN], int num)
+act_zoneset (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-int_tunnel (const char (*p)[STR_LEN], int num)
+int_tunnel (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-add_route (const char (*p)[STR_LEN], int num)
+add_route (const char (*p)[STR_LEN], int type)
+{
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
+}
+
+void
+del_route (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-del_route (const char (*p)[STR_LEN], int num)
+add_arp (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-add_arp (const char (*p)[STR_LEN], int num)
+del_arp (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-del_arp (const char (*p)[STR_LEN], int num)
+input_frame (const char (*p)[STR_LEN], int type)
 {
 
 }
 
 void
-input_frame (const char (*p)[STR_LEN], int num)
+sip (const char (*p)[STR_LEN], int type)
 {
-
+  if(ctr_type == INPUT_FRAME_MODE)
+    {
+      printf ("frame sip %s\n", p[2]);
+    }
+  else
+    {
+      printf ("int sip %s\n", p[2]);
+    }
 }
 
 void
-sip (const char (*p)[STR_LEN], int num)
+dip (const char (*p)[STR_LEN], int type)
 {
-
-}
-
-void
-dip (const char (*p)[STR_LEN], int num)
-{
-
+  if(ctr_type == INPUT_FRAME_MODE)
+    {
+      printf ("frame dip %s\n", p[2]);
+    }
+  else
+    {
+      printf ("int dip %s\n", p[2]);
+    }
 }
 
 struct cmd_table cmd_tables[] =
   {
     { "zone", ZONE, zone },
-    { "add-member", ADD_MEMBER, add_member },
-    { "del-member", DEL_MEMBER, del_member },
-    { "nozone", NO_ZONE, no_zone },
-    { "zoneset", ZONESET, zoneset },
-    { "add-zone", ADD_ZONE, add_zone },
-    { "del-zone", DEL_ZONE, del_zone },
-    { "nozoneset", NO_ZONESET, nozone_set },
-    { "activezoneset", ACTIVE_ZONESET, act_zoneset },
-    { "int-tunnel", 0, int_tunnel },
+    { "add-member", 0, add_member },
+    { "del-member", 0, del_member },
+    { "nozone", 0, no_zone },
+    { "zoneset", 0, zoneset },
+    { "add-zone", 0, add_zone },
+    { "del-zone", 0, del_zone },
+    { "nozoneset", 0, nozone_set },
+    { "activezoneset", 0, act_zoneset },
+    { "inttunnel", GRE_MODE, int_tunnel },
     { "add-route", 0, add_route },
     { "del-route", 0, del_route },
     { "add-arp", 0, add_arp },
     { "del-arp", 0, del_arp },
-    { "input-frame", 0, input_frame },
-    { "sip", 0, sip },
-    { "dip", 0, dip } };
+    { "input-frame", INPUT_FRAME_MODE, input_frame },
+    { "sip=", 0, sip },
+    { "dip=", 0, dip } };
 
 void
 parse_cmd (int sum, const char (*p)[STR_LEN])
 {
-  char type;
   int index;
   int i;
   int j;
@@ -163,14 +177,22 @@ parse_cmd (int sum, const char (*p)[STR_LEN])
         {
           if (strcmp (p[0], cmd_tables[j].cmd1) == 0)
             {
-              cmd_tables[j].fun (p, sum);
+              cmd_tables[j].fun (p, ctr_type);
             }
         }
       else
         {
           if (strcmp (command, cmd_tables[j].cmd1) == 0)
             {
-              cmd_tables[j].fun (p, sum);
+              if (strcmp (command, "inttunnel") == 0)
+                {
+                  ctr_type = GRE_MODE;
+                }
+              else if (strcmp (command, "input-frame") == 0)
+                {
+                  ctr_type = INPUT_FRAME_MODE;
+                }
+              cmd_tables[j].fun (p, ctr_type);
             }
         }
     }
