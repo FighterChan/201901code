@@ -42,13 +42,6 @@ struct cmd_table
   (*fun) (const char (*cmd)[STR_LEN], void *data);
 };
 
-struct in_mess
-{
-  char sip[STR_LEN];
-  char dip[STR_LEN];
-  struct list_head list;
-};
-
 struct in_frame
 {
   char sip[STR_LEN];
@@ -72,19 +65,11 @@ struct arp
   struct list_head list;
 };
 
-struct gre
-{
-  char sip[STR_LEN];
-  char dip[STR_LEN];
-  int id;
-  struct list_head list;
-};
-
 struct int_tunnel
 {
-  int id;
   char sip[STR_LEN];
   char dip[STR_LEN];
+  int id;
   struct list_head list;
 };
 

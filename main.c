@@ -49,7 +49,7 @@ void
 create_zoneset (const char (*p)[STR_LEN], void *data)
 {
 
-  printf ("%s %s\n", p[0], p[1]);
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
   struct zoneset *pzoneset;
   pzoneset = (struct zoneset *) malloc (sizeof(struct zoneset));
   if (pzoneset == NULL)
@@ -71,7 +71,7 @@ act_zoneset (const char (*p)[STR_LEN], void *data)
 {
   printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
   struct zoneset *pset, *nset;
-  list_for_each_entry_safe(pset,nset,&parser->zoneset_head,list)
+  list_for_each_entry_safe(pset,nset,&zoneset_head,list)
     {
       if (pset->id == atoi (p[2]))
         {
@@ -87,14 +87,14 @@ act_zoneset (const char (*p)[STR_LEN], void *data)
 void
 create_zone (const char (*p)[STR_LEN], void *data)
 {
-  printf ("%s %s\n", p[0], p[1]);
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
   struct zone *pzone;
   pzone = (struct zone *) malloc (sizeof(struct zone));
   if (pzone == NULL)
     {
       return;
     }
-  INIT_LIST_HEAD(&pzone->mem_head);
+  INIT_LIST_HEAD (&pzone->mem_head);
   pzone->id = atoi (p[1]);
   list_add_tail (&pzone->list, &zone_head);
 }
@@ -102,7 +102,7 @@ create_zone (const char (*p)[STR_LEN], void *data)
 void
 create_member (const char (*p)[STR_LEN], void *data)
 {
-  printf ("%s %s\n", p[0], p[1]);
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
   struct zone *pzone, *nzone;
   struct zone_mem *pmem;
   pmem = (struct zone_mem *) malloc (sizeof(struct zone_mem));
@@ -112,30 +112,31 @@ create_member (const char (*p)[STR_LEN], void *data)
     }
   strncpy (pmem->member, p[1], strlen (p[1]));
   /* 找到上次的zone区域 */
-  pzone = list_last_entry(&zone_head,struct zone,list);
-  if(pzone == NULL)
+  pzone = list_last_entry(&zone_head, struct zone, list);
+  if (pzone == NULL)
     {
       return;
     }
-  list_add_tail(&pmem->list,&pzone->mem_head);
+  list_add_tail (&pmem->list, &pzone->mem_head);
 }
 
 void
 del_member (const char (*p)[STR_LEN], void *data)
 {
-  printf ("%s %s\n", p[0], p[1]);
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
 }
 
 void
 no_zone (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
 
 }
 
 void
 add_zone (const char (*p)[STR_LEN], void *data)
 {
-  printf ("%s %s\n", p[0], p[1]);
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
   struct zoneset *pzoneset;
   struct zone *pzone;
   pzone = (struct zone *) malloc (sizeof(struct zone));
@@ -143,41 +144,47 @@ add_zone (const char (*p)[STR_LEN], void *data)
     {
       return;
     }
-  pzone->id = atoi(p[1]);
-  pzoneset = list_last_entry(&zoneset_head,struct zoneset,list);
-  if(pzoneset == NULL)
+  pzone->id = atoi (p[1]);
+  pzoneset = list_last_entry(&zoneset_head, struct zoneset, list);
+  if (pzoneset == NULL)
     {
       return;
     }
-  struct zone *pz,*nz;
+  struct zone *pz, *nz;
   struct zone *tmp;
+  int flg = 0;
   list_for_each_entry_safe(pz,nz,&zone_head,list)
-  {
-    if(pzone->id == pz->id)
-      {
-        tmp = pz;
-      }
-  }
-  if(tmp != NULL){
-      list_add_tail(&tmp->list,&pzoneset->zone_head);
-  }
+    {
+      if (pzone->id == pz->id)
+        {
+          flg = 1;
+        }
+    }
+  if (flg != 0)
+    {
+      list_add_tail (&pzone->list, &pzoneset->zone_head);
+    }
 }
 
 void
 del_zone (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
 
 }
 
 void
 nozone_set (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
 
 }
 
 void
 int_tunnel (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
+
   struct int_tunnel *pint;
   pint = (struct int_tunnel *) malloc (sizeof(struct int_tunnel));
   if (pint == NULL)
@@ -185,8 +192,8 @@ int_tunnel (const char (*p)[STR_LEN], void *data)
       return;
     }
   pint->id = atoi (p[2]);
-  strcpy(pint->sip,"eol");
-  strcpy(pint->dip,"eol");
+  strcpy (pint->sip, "eol");
+  strcpy (pint->dip, "eol");
   list_add_tail (&pint->list, &tunnel_head);
 }
 
@@ -195,48 +202,53 @@ add_route (const char (*p)[STR_LEN], void *data)
 {
   printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
   struct ip_route_for *pr;
-  pr = (struct ip_route_for *)malloc(sizeof(struct ip_route_for));
-  if(pr == NULL)
+  pr = (struct ip_route_for *) malloc (sizeof(struct ip_route_for));
+  if (pr == NULL)
     {
       return;
     }
-  strcpy(pr->ip,p[1]);
-  pr->v_int = atoi(p[3]);
-  list_add_tail(&pr->list,&route_head);
+  strcpy (pr->ip, p[1]);
+  pr->v_int = atoi (p[3]);
+  list_add_tail (&pr->list, &route_head);
 }
 
 void
 del_route (const char (*p)[STR_LEN], void *data)
 {
-
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
 
 }
 
 void
 add_arp (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
+
   struct arp *pa;
-  pa = (struct arp *)malloc(sizeof(struct arp));
-  if(pa == NULL)
+  pa = (struct arp *) malloc (sizeof(struct arp));
+  if (pa == NULL)
     {
       return;
     }
-  strcpy(pa->ip,p[1]);
-  strcpy(pa->mac,p[2]);
-  strcpy(pa->r_int,p[3]);
+  strcpy (pa->ip, p[1]);
+  strcpy (pa->mac, p[2]);
+  strcpy (pa->r_int, p[3]);
 
-  list_add_tail(&pa->list,&arp_head);
+  list_add_tail (&pa->list, &arp_head);
 }
 
 void
 del_arp (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
 
 }
 
 void
 input_frame (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
+
   struct in_frame *pf;
   pf = (struct in_frame *) malloc (sizeof(struct in_frame));
   if (pf == NULL)
@@ -244,8 +256,8 @@ input_frame (const char (*p)[STR_LEN], void *data)
       return;
     }
   pf->id = atoi (p[1]);
-  strcpy(pf->sip,"eol");
-  strcpy(pf->dip,"eol");
+  strcpy (pf->sip, "eol");
+  strcpy (pf->dip, "eol");
   list_add_tail (&pf->list, &frame_head);
 
 }
@@ -253,46 +265,59 @@ input_frame (const char (*p)[STR_LEN], void *data)
 void
 sip (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
+
   struct int_tunnel *pint, *nint;
-  struct in_frame *pf,*nf;
+  struct in_frame *pf, *nf;
   if (ctr_type == INPUT_FRAME_MODE)
     {
       printf ("frame sip %s\n", p[2]);
-      list_for_each_entry_safe(pf,nf,&frame_head,list)
-      {
-        strcpy(pf->sip,p[2]);
-      }
+      pf = list_last_entry(&frame_head, struct in_frame, list);
+      if (pf == NULL)
+        {
+          return;
+        }
+      strcpy (pf->sip, p[2]);
+
     }
   else
     {
       printf ("int sip %s\n", p[2]);
-      list_for_each_entry_safe(pint,nint,&tunnel_head,list)
-      {
-        strcpy(pint->sip,p[2]);
-      }
+      pint = list_last_entry(&tunnel_head, struct int_tunnel, list);
+      if (pint == NULL)
+        {
+          return;
+        }
+      strcpy (pint->sip, p[2]);
     }
 }
 
 void
 dip (const char (*p)[STR_LEN], void *data)
 {
+  printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
+
   struct int_tunnel *pint, *nint;
-  struct in_frame *pf,*nf;
+  struct in_frame *pf, *nf;
   if (ctr_type == INPUT_FRAME_MODE)
     {
       printf ("frame dip %s\n", p[2]);
-      list_for_each_entry_safe(pf,nf,&frame_head,list)
-      {
-        strcpy(pf->dip,p[2]);
-      }
+      pf = list_last_entry(&frame_head, struct in_frame, list);
+      if (pf == NULL)
+        {
+          return;
+        }
+      strcpy (pf->dip, p[2]);
     }
   else
     {
       printf ("int dip %s\n", p[2]);
-      list_for_each_entry_safe(pint,nint,&tunnel_head,list)
-      {
-        strcpy(pint->dip,p[2]);
-      }
+      pint = list_last_entry(&tunnel_head, struct int_tunnel, list);
+      if (pint == NULL)
+        {
+          return;
+        }
+      strcpy (pint->dip, p[2]);
     }
 }
 
@@ -381,7 +406,7 @@ look_up_route_by_dip (const char *dip)
   struct ip_route_for *p, *n;
   list_for_each_entry_safe (p, n, &route_head,list)
     {
-      if (strcmp(p->ip,dip) == 0)
+      if (strcmp (p->ip, dip) == 0)
         {
           return p;
         }
@@ -409,7 +434,7 @@ look_up_arp_rint_by_tunnel_dip (const char *tunnel_dip)
   struct arp *p, *n;
   list_for_each_entry_safe (p, n, &arp_head,list)
     {
-      if (strcmp(p->ip,tunnel_dip) == 0)
+      if (strcmp (p->ip, tunnel_dip) == 0)
         {
           return p;
         }
@@ -417,48 +442,118 @@ look_up_arp_rint_by_tunnel_dip (const char *tunnel_dip)
   return NULL;
 }
 
-
-
-void output_file(void)
+void
+output_file (void)
 {
-  struct in_frame *pf,*nf;
-  struct ip_route_for *pr,*nr;
-  struct int_tunnel *pi,*ni;
-  struct arp *pa,*na;
+  struct in_frame *pf, *nf;
+  struct ip_route_for *pr, *nr;
+  struct int_tunnel *pi, *ni;
+  struct arp *pa, *na;
   /*查找輸入表*/
   list_for_each_entry_safe(pf,nf,&frame_head,list)
-  {
-    printf("%s\n",pf->dip);
-    pr = look_up_route_by_dip(pf->dip);
-    if(pr == NULL)
-      {
-        printf("pr NULL\n");
-        return;
-      }
-    pi = look_up_tunnel_dip_by_route_vint(pr->v_int);
-    if(pi == NULL)
-      {
-        printf("pi NULL\n");
-        return;
-      }
-    pa = look_up_arp_rint_by_tunnel_dip(pi->dip);
-    if(pa == NULL)
-      {
-        printf("pa NULL\n");
-        return;
-      }
-    printf("%s\n",pa->r_int);
-  }
+    {
+      printf ("%s\n", pf->dip);
+      pr = look_up_route_by_dip (pf->dip);
+      if (pr == NULL)
+        {
+          printf ("pr NULL\n");
+          return;
+        }
+      pi = look_up_tunnel_dip_by_route_vint (pr->v_int);
+      if (pi == NULL)
+        {
+          printf ("pi NULL\n");
+          return;
+        }
+      pa = look_up_arp_rint_by_tunnel_dip (pi->dip);
+      if (pa == NULL)
+        {
+          printf ("pa NULL\n");
+          return;
+        }
+      printf ("%s\n", pa->r_int);
+    }
 }
 
+void
+free_all (void)
+{
+  struct zoneset *pset, *nset;
+  struct zone *pz, *nz;
+  struct zone_mem *pmem, *nmem;
+  struct int_tunnel *pint, *nint;
+  struct ip_route_for *pi, *ni;
+  struct arp *pa, *na;
+  struct in_frame *pf, *nf;
+
+  list_for_each_entry_safe(pf,nf,&frame_head,list)
+    {
+      list_del_init (&pf->list);
+      free (pf);
+      pf = NULL;
+    }
+
+  list_for_each_entry_safe(pa,na,&arp_head,list)
+    {
+      list_del_init (&pa->list);
+      free (pa);
+      pa = NULL;
+    }
+
+  list_for_each_entry_safe(pi,ni,&route_head,list)
+    {
+      list_del_init (&pi->list);
+      free (pi);
+      pi = NULL;
+    }
+
+  list_for_each_entry_safe(pint,nint,&tunnel_head,list)
+    {
+      list_del_init (&pint->list);
+      free (pint);
+      pint = NULL;
+    }
+
+  list_for_each_entry_safe(pint,nint,&tunnel_head,list)
+    {
+      list_del_init (&pint->list);
+      free (pint);
+      pint = NULL;
+    }
+
+  list_for_each_entry_safe(pz,nz,&zone_head,list)
+    {
+      list_del_init (&pz->list);
+      free (pz);
+      pz = NULL;
+    }
+
+  pz = NULL;
+  nz = NULL;
+  list_for_each_entry_safe(pset,pset,&zoneset_head,list)
+    {
+      list_for_each_entry_safe(pz,nz,&pset->zone_head,list)
+        {
+          list_for_each_entry_safe(pmem,nmem,&pz->mem_head,list)
+            {
+              list_del_init (&pmem->list);
+              free (pmem);
+              pmem = NULL;
+            }
+          list_del_init (&pz->list);
+          free (pz);
+          pz = NULL;
+        }
+
+      list_del_init (&pset->list);
+      free (pset);
+      pset = NULL;
+    }
+
+}
 int
 main (int argc, char **argv)
 {
-  parser = create_parse ();
-  if (parser == NULL)
-    {
-      return -1;
-    }
   char buf[128] =
     { 0 };
   FILE *fp;
@@ -485,6 +580,8 @@ main (int argc, char **argv)
       memset (buf, 0, sizeof(buf));
       memset (cmd, 0, sizeof(cmd));
     }
-  output_file();
+  fclose (fp);
+  output_file ();
+  free_all();
   return 0;
 }
