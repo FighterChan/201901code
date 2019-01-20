@@ -19,7 +19,6 @@
 
 char cmd[STR_LEN][STR_LEN];
 int ctr_type = INPUT_FRAME_MODE;
-struct parse *parser;
 
 LIST_HEAD(tunnel_head);
 LIST_HEAD(frame_head);
@@ -30,25 +29,9 @@ LIST_HEAD(zoneset_head);
 LIST_HEAD(zone_head);
 LIST_HEAD(mem_head);
 
-struct parse *
-create_parse (void)
-{
-  struct parse *p;
-  p = (struct parse *) malloc (sizeof(struct parse));
-  if (p == NULL)
-    {
-      return NULL;
-    }
-  /* 设置默认链表 */
-  INIT_LIST_HEAD (&p->zoneset_head);
-  INIT_LIST_HEAD (&p->zone_mode_head);
-  return p;
-}
-
 void
 create_zoneset (const char (*p)[STR_LEN], void *data)
 {
-
 
   struct zoneset *pzoneset;
   pzoneset = (struct zoneset *) malloc (sizeof(struct zoneset));
@@ -130,7 +113,6 @@ void
 no_zone (const char (*p)[STR_LEN], void *data)
 {
 
-
 }
 
 void
@@ -170,20 +152,17 @@ void
 del_zone (const char (*p)[STR_LEN], void *data)
 {
 
-
 }
 
 void
 nozone_set (const char (*p)[STR_LEN], void *data)
 {
 
-
 }
 
 void
 int_tunnel (const char (*p)[STR_LEN], void *data)
 {
-
 
   struct int_tunnel *pint;
   pint = (struct int_tunnel *) malloc (sizeof(struct int_tunnel));
@@ -216,13 +195,11 @@ void
 del_route (const char (*p)[STR_LEN], void *data)
 {
 
-
 }
 
 void
 add_arp (const char (*p)[STR_LEN], void *data)
 {
-
 
   struct arp *pa;
   pa = (struct arp *) malloc (sizeof(struct arp));
@@ -241,13 +218,11 @@ void
 del_arp (const char (*p)[STR_LEN], void *data)
 {
 
-
 }
 
 void
 input_frame (const char (*p)[STR_LEN], void *data)
 {
-
 
   struct in_frame *pf;
   pf = (struct in_frame *) malloc (sizeof(struct in_frame));
@@ -265,7 +240,6 @@ input_frame (const char (*p)[STR_LEN], void *data)
 void
 sip (const char (*p)[STR_LEN], void *data)
 {
-
 
   struct int_tunnel *pint, *nint;
   struct in_frame *pf, *nf;
@@ -286,14 +260,21 @@ sip (const char (*p)[STR_LEN], void *data)
         {
           return;
         }
-      strcpy (pint->sip, p[2]);
+      if (strcmp (pint->sip, p[2]) == 0)
+        {
+          /*eol 表示sip为空*/
+          strcpy (pint->sip, "eol");
+        }
+      else
+        {
+          strcpy (pint->sip, p[2]);
+        }
     }
 }
 
 void
 dip (const char (*p)[STR_LEN], void *data)
 {
-
 
   struct int_tunnel *pint, *nint;
   struct in_frame *pf, *nf;
@@ -313,7 +294,14 @@ dip (const char (*p)[STR_LEN], void *data)
         {
           return;
         }
-      strcpy (pint->dip, p[2]);
+      if (strcmp (pint->dip, p[2]) == 0)
+        {
+          strcpy (pint->dip, "eol");
+        }
+      else
+        {
+          strcpy (pint->dip, p[2]);
+        }
     }
 }
 
@@ -403,8 +391,32 @@ struct ip_route_for *
 look_up_route_by_dip (const char *dip)
 {
   struct ip_route_for *p, *n;
+  char *token;
+  char *ps;
+  int mask = 0;
+  int i;
+  char ip[16];
+  memset (ip, 0, sizeof(ip));
   list_for_each_entry_safe (p, n, &route_head,list)
     {
+//      printf("route-> %s\n",p->ip);
+//      printf("dip-> %s\n",dip);
+
+//      memset(ip,0,sizeof(ip));
+//      ps = p->ip;
+//      i = 0;
+//      while ((token = strsep (&ps, "/")) != NULL)
+//        {
+//          if (i != 0)
+//            {
+//              mask = atoi(token);
+//            }
+//          else
+//            {
+//              strcpy(ip,token);
+//            }
+//          i++;
+//        }
       if (strcmp (p->ip, dip) == 0)
         {
           return p;
@@ -419,7 +431,8 @@ look_up_tunnel_dip_by_route_vint (int route_vint)
   struct int_tunnel *p, *n;
   list_for_each_entry_safe (p, n, &tunnel_head,list)
     {
-      if (p->id == route_vint)
+      if (p->id == route_vint && strcmp (p->dip, "eol") != 0
+          && strcmp (p->sip, "eol") != 0)
         {
           return p;
         }
@@ -442,35 +455,55 @@ look_up_arp_rint_by_tunnel_dip (const char *tunnel_dip)
 }
 
 void
-output_file (void)
+output_file (char *path)
 {
+  FILE *fp;
   struct in_frame *pf, *nf;
   struct ip_route_for *pr, *nr;
   struct int_tunnel *pi, *ni;
   struct arp *pa, *na;
+  char outpath[32];
+  memset (outpath, 0, sizeof(outpath));
+  filename (path, outpath);
+  fp = fopen (outpath, "w");
+  if (fp == NULL)
+    {
+      return;
+    }
   /*查找輸入表*/
   list_for_each_entry_safe(pf,nf,&frame_head,list)
     {
-      printf ("%s\n%s", pf->sip,pf->dip);
+      /* 通过输入表项dip查找ip转发表 */
       pr = look_up_route_by_dip (pf->dip);
       if (pr == NULL)
         {
           printf ("pr NULL\n");
+//          printf("\t=> frame %d DROP",pf->id);
+          fprintf (fp, "%s %d %s\n", "frame", pf->id, "DROP");
           continue;
         }
+      /* 通过ip转发表的虚拟接口查找隧道dip */
       pi = look_up_tunnel_dip_by_route_vint (pr->v_int);
       if (pi == NULL)
         {
           printf ("pi NULL\n");
+          fprintf (fp, "%s %d %s\n", "frame", pf->id, "DROP");
           continue;
         }
+      /* 通过隧道dip查找arp表的真实出接口 */
       pa = look_up_arp_rint_by_tunnel_dip (pi->dip);
       if (pa == NULL)
         {
           printf ("pa NULL\n");
+          fprintf (fp, "%s %d %s\n", "frame", pf->id, "DROP");
           continue;
         }
+
+      printf ("\t=> frame %d %s\n", pf->id, pa->r_int);
+      fprintf (fp, "%s %d %s\n", "frame", pf->id, pa->r_int);
+
     }
+  fclose (fp);
 }
 
 void
@@ -512,13 +545,6 @@ free_all (void)
       pint = NULL;
     }
 
-  list_for_each_entry_safe(pint,nint,&tunnel_head,list)
-    {
-      list_del_init (&pint->list);
-      free (pint);
-      pint = NULL;
-    }
-
   list_for_each_entry_safe(pz,nz,&zone_head,list)
     {
       list_del_init (&pz->list);
@@ -549,6 +575,7 @@ free_all (void)
     }
 
 }
+
 int
 main (int argc, char **argv)
 {
@@ -579,7 +606,7 @@ main (int argc, char **argv)
       memset (cmd, 0, sizeof(cmd));
     }
   fclose (fp);
-  output_file ();
-  free_all();
+  output_file (argv[1]);
+  free_all ();
   return 0;
 }

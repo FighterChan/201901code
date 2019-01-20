@@ -97,12 +97,5 @@ struct zoneset
   struct list_head list;
 };
 
-struct parse
-{
-  struct list_head zoneset_head;
-  struct list_head zone_mode_head;
-  struct list_head list;
-};
-
 /* body of zone.h */
 #endif /* _ZONE_H_ */

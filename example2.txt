@@ -1,0 +1,61 @@
+add-arp 2.2.2.2 0000.0000.0001 ten0/1
+add-arp 2.2.2.2 0000.0000.0002 ten0/2
+add-arp 3.3.3.3 0000.0000.0003 ten0/3
+int tunnel 1
+sip = 1.1.1.1
+dip = 2.2.2.2
+int tunnel 2
+sip = 1.1.1.1
+dip = 3.3.3.3
+int tunnel 3
+sip = 1.1.1.1
+dip = 3.3.3.3
+int tunnel 4
+sip = 1.1.1.1
+int tunnel 5
+add-route 20.0.0.0/16 tunnel 1
+add-route 20.0.0.0/24 tunnel 2
+add-route 30.0.0.0/24 tunnel 2
+add-route 30.0.0.0/16 tunnel 1
+add-route 30.0.0.0/25 tunnel 3
+add-route 30.0.0.0/26 tunnel 4
+add-route 30.0.0.0/28 tunnel 5
+zone 1
+add-member 10.0.0.1
+add-member 20.0.0.1
+zone 2
+add-member 10.0.0.1
+add-member 30.0.0.1
+zone 3
+add-member 20.0.0.1
+add-member 30.0.0.1
+zoneset 1
+add-zone 1
+add-zone 2
+add-zone 3
+zoneset 2
+add-zone 1
+add-zone 2
+active zoneset 1
+input-frame 1
+sip = 10.0.0.1
+dip = 20.0.0.1
+input-frame 2
+sip = 30.0.0.1
+dip = 20.0.0.1
+active zoneset 2
+input-frame 3
+sip = 30.0.0.1
+dip = 20.0.0.1
+input-frame 4
+sip = 20.0.0.1
+dip = 10.0.0.1
+no int tunnel 2
+input-frame 5
+sip = 10.0.0.1
+dip = 30.0.0.1
+zoneset 2
+add-zone 3
+input-frame 6
+sip = 20.0.0.1
+dip = 30.0.0.1
