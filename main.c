@@ -26,6 +26,10 @@ LIST_HEAD(frame_head);
 LIST_HEAD(route_head);
 LIST_HEAD(arp_head);
 
+LIST_HEAD(zoneset_head);
+LIST_HEAD(zone_head);
+LIST_HEAD(mem_head);
+
 struct parse *
 create_parse (void)
 {
@@ -46,7 +50,6 @@ create_zoneset (const char (*p)[STR_LEN], void *data)
 {
 
   printf ("%s %s\n", p[0], p[1]);
-  struct parse *parse;
   struct zoneset *pzoneset;
   pzoneset = (struct zoneset *) malloc (sizeof(struct zoneset));
   if (pzoneset == NULL)
@@ -59,9 +62,8 @@ create_zoneset (const char (*p)[STR_LEN], void *data)
   pzoneset->id = atoi (p[1]);
   /* 添加时未激活 */
   pzoneset->active = UNACTIVE;
-  pzoneset->active2 = ACTIVE;
   /* 把zoneset节点加入链表 */
-  list_add_tail (&pzoneset->list, &parser->zoneset_head);
+  list_add_tail (&pzoneset->list, &zoneset_head);
 }
 
 void
@@ -92,10 +94,9 @@ create_zone (const char (*p)[STR_LEN], void *data)
     {
       return;
     }
-  INIT_LIST_HEAD (&pzone->mem_head);
+  INIT_LIST_HEAD(&pzone->mem_head);
   pzone->id = atoi (p[1]);
-  pzone->active = ACTIVE;
-  list_add_tail (&pzone->list, &parser->zone_mode_head);
+  list_add_tail (&pzone->list, &zone_head);
 }
 
 void
@@ -110,15 +111,13 @@ create_member (const char (*p)[STR_LEN], void *data)
       return;
     }
   strncpy (pmem->member, p[1], strlen (p[1]));
-  list_for_each_entry_safe(pzone,nzone,&parser->zone_mode_head,list)
+  /* 找到上次的zone区域 */
+  pzone = list_last_entry(&zone_head,struct zone,list);
+  if(pzone == NULL)
     {
-      if (pzone->active == ACTIVE)
-        {
-          pmem->id = pzone->id;
-          list_add_tail (&pmem->list, &pzone->mem_head);
-          pzone->active = UNACTIVE;
-        }
+      return;
     }
+  list_add_tail(&pmem->list,&pzone->mem_head);
 }
 
 void
@@ -137,29 +136,37 @@ void
 add_zone (const char (*p)[STR_LEN], void *data)
 {
   printf ("%s %s\n", p[0], p[1]);
-  /* 将临时存放的链表转移过来 */
-  struct zoneset *pzoneset, *nzoneset;
-  struct zone *pzone, *nzone;
-  list_for_each_entry_safe(pzoneset,nzoneset,&parser->zoneset_head,list)
+  struct zoneset *pzoneset;
+  struct zone *pzone;
+  pzone = (struct zone *) malloc (sizeof(struct zone));
+  if (pzone == NULL)
     {
-      if (pzoneset->active2 == ACTIVE)
-        {
-          list_for_each_entry_safe(pzone,nzone,&parser->zone_mode_head,list)
-            {
-              if (pzone->id == atoi (p[1]))
-                {
-                  list_add_tail (&pzone->list, &pzoneset->zone_head);
-                }
-            }
-          pzoneset->active2 = UNACTIVE;
-        }
+      return;
     }
+  pzone->id = atoi(p[1]);
+  pzoneset = list_last_entry(&zoneset_head,struct zoneset,list);
+  if(pzoneset == NULL)
+    {
+      return;
+    }
+  struct zone *pz,*nz;
+  struct zone *tmp;
+  list_for_each_entry_safe(pz,nz,&zone_head,list)
+  {
+    if(pzone->id == pz->id)
+      {
+        tmp = pz;
+      }
+  }
+  if(tmp != NULL){
+      list_add_tail(&tmp->list,&pzoneset->zone_head);
+  }
 }
 
 void
 del_zone (const char (*p)[STR_LEN], void *data)
 {
-  struct zone *pzone,*nzone;
+
 }
 
 void
