@@ -76,7 +76,6 @@ struct int_tunnel
 struct zone_mem
 {
   char member[STR_LEN];
-  int id;
   struct list_head list;
 };
 
@@ -84,7 +83,6 @@ struct zone
 {
   struct list_head mem_head;
   int id;
-  int active; /* 當前設置區 */
   struct list_head list;
 };
 
@@ -93,7 +91,6 @@ struct zoneset
   struct list_head zone_head;
   int id;
   int active; /* 激活时active = 1 */
-  int active2; /* 表示當前設置區 */
   struct list_head list;
 };
 

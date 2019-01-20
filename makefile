@@ -1,6 +1,6 @@
 EXE = zone.elf
-OBJ = main.o tools.o
-SRC = main.c tools.c
+OBJ = zone.o 
+SRC = zone.c 
 CC = gcc
 CFLAGS = -g
 LDFLAGS =
