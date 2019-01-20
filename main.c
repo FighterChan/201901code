@@ -21,10 +21,10 @@ char cmd[STR_LEN][STR_LEN];
 int ctr_type = INPUT_FRAME_MODE;
 struct parse *parser;
 
-//LIST_HEAD(zone_head);
-//LIST_HEAD(mem_head);
-//LIST_HEAD(zoneset_head);
-//LIST_HEAD(parse_head);
+LIST_HEAD(tunnel_head);
+LIST_HEAD(frame_head);
+LIST_HEAD(route_head);
+LIST_HEAD(arp_head);
 
 struct parse *
 create_parse (void)
@@ -59,6 +59,7 @@ create_zoneset (const char (*p)[STR_LEN], void *data)
   pzoneset->id = atoi (p[1]);
   /* 添加时未激活 */
   pzoneset->active = UNACTIVE;
+  pzoneset->active2 = ACTIVE;
   /* 把zoneset节点加入链表 */
   list_add_tail (&pzoneset->list, &parser->zoneset_head);
 }
@@ -91,7 +92,9 @@ create_zone (const char (*p)[STR_LEN], void *data)
     {
       return;
     }
+  INIT_LIST_HEAD (&pzone->mem_head);
   pzone->id = atoi (p[1]);
+  pzone->active = ACTIVE;
   list_add_tail (&pzone->list, &parser->zone_mode_head);
 }
 
@@ -109,8 +112,12 @@ create_member (const char (*p)[STR_LEN], void *data)
   strncpy (pmem->member, p[1], strlen (p[1]));
   list_for_each_entry_safe(pzone,nzone,&parser->zone_mode_head,list)
     {
-      pmem->id = pzone->id;
-      list_add_tail (&pmem->list, &pzone->mem_head);
+      if (pzone->active == ACTIVE)
+        {
+          pmem->id = pzone->id;
+          list_add_tail (&pmem->list, &pzone->mem_head);
+          pzone->active = UNACTIVE;
+        }
     }
 }
 
@@ -135,13 +142,16 @@ add_zone (const char (*p)[STR_LEN], void *data)
   struct zone *pzone, *nzone;
   list_for_each_entry_safe(pzoneset,nzoneset,&parser->zoneset_head,list)
     {
-      // 是否激活处理？？
-    list_for_each_entry_safe(pzone,nzone,&parser->zone_mode_head,list)
+      if (pzoneset->active2 == ACTIVE)
         {
-          if (pzone->id == atoi(p[1]))
+          list_for_each_entry_safe(pzone,nzone,&parser->zone_mode_head,list)
             {
-              list_add_tail (&pzone->list,&pzoneset->zone_head);
+              if (pzone->id == atoi (p[1]))
+                {
+                  list_add_tail (&pzone->list, &pzoneset->zone_head);
+                }
             }
+          pzoneset->active2 = UNACTIVE;
         }
     }
 }
@@ -161,25 +171,54 @@ nozone_set (const char (*p)[STR_LEN], void *data)
 void
 int_tunnel (const char (*p)[STR_LEN], void *data)
 {
-
+  struct int_tunnel *pint;
+  pint = (struct int_tunnel *) malloc (sizeof(struct int_tunnel));
+  if (pint == NULL)
+    {
+      return;
+    }
+  pint->id = atoi (p[2]);
+  strcpy(pint->sip,"eol");
+  strcpy(pint->dip,"eol");
+  list_add_tail (&pint->list, &tunnel_head);
 }
 
 void
 add_route (const char (*p)[STR_LEN], void *data)
 {
   printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
+  struct ip_route_for *pr;
+  pr = (struct ip_route_for *)malloc(sizeof(struct ip_route_for));
+  if(pr == NULL)
+    {
+      return;
+    }
+  strcpy(pr->ip,p[1]);
+  pr->v_int = atoi(p[3]);
+  list_add_tail(&pr->list,&route_head);
 }
 
 void
 del_route (const char (*p)[STR_LEN], void *data)
 {
 
+
 }
 
 void
 add_arp (const char (*p)[STR_LEN], void *data)
 {
+  struct arp *pa;
+  pa = (struct arp *)malloc(sizeof(struct arp));
+  if(pa == NULL)
+    {
+      return;
+    }
+  strcpy(pa->ip,p[1]);
+  strcpy(pa->mac,p[2]);
+  strcpy(pa->r_int,p[3]);
 
+  list_add_tail(&pa->list,&arp_head);
 }
 
 void
@@ -191,32 +230,62 @@ del_arp (const char (*p)[STR_LEN], void *data)
 void
 input_frame (const char (*p)[STR_LEN], void *data)
 {
+  struct in_frame *pf;
+  pf = (struct in_frame *) malloc (sizeof(struct in_frame));
+  if (pf == NULL)
+    {
+      return;
+    }
+  pf->id = atoi (p[1]);
+  strcpy(pf->sip,"eol");
+  strcpy(pf->dip,"eol");
+  list_add_tail (&pf->list, &frame_head);
 
 }
 
 void
 sip (const char (*p)[STR_LEN], void *data)
 {
+  struct int_tunnel *pint, *nint;
+  struct in_frame *pf,*nf;
   if (ctr_type == INPUT_FRAME_MODE)
     {
       printf ("frame sip %s\n", p[2]);
+      list_for_each_entry_safe(pf,nf,&tunnel_head,list)
+      {
+        strcpy(pf->sip,p[2]);
+      }
     }
   else
     {
       printf ("int sip %s\n", p[2]);
+      list_for_each_entry_safe(pint,nint,&tunnel_head,list)
+      {
+        strcpy(pint->sip,p[2]);
+      }
     }
 }
 
 void
 dip (const char (*p)[STR_LEN], void *data)
 {
+  struct int_tunnel *pint, *nint;
+  struct in_frame *pf,*nf;
   if (ctr_type == INPUT_FRAME_MODE)
     {
       printf ("frame dip %s\n", p[2]);
+      list_for_each_entry_safe(pf,nf,&tunnel_head,list)
+      {
+        strcpy(pf->dip,p[2]);
+      }
     }
   else
     {
       printf ("int dip %s\n", p[2]);
+      list_for_each_entry_safe(pint,nint,&tunnel_head,list)
+      {
+        strcpy(pint->dip,p[2]);
+      }
     }
 }
 
