@@ -159,7 +159,7 @@ add_zone (const char (*p)[STR_LEN], void *data)
 void
 del_zone (const char (*p)[STR_LEN], void *data)
 {
-
+  struct zone *pzone,*nzone;
 }
 
 void
@@ -251,7 +251,7 @@ sip (const char (*p)[STR_LEN], void *data)
   if (ctr_type == INPUT_FRAME_MODE)
     {
       printf ("frame sip %s\n", p[2]);
-      list_for_each_entry_safe(pf,nf,&tunnel_head,list)
+      list_for_each_entry_safe(pf,nf,&frame_head,list)
       {
         strcpy(pf->sip,p[2]);
       }
@@ -274,7 +274,7 @@ dip (const char (*p)[STR_LEN], void *data)
   if (ctr_type == INPUT_FRAME_MODE)
     {
       printf ("frame dip %s\n", p[2]);
-      list_for_each_entry_safe(pf,nf,&tunnel_head,list)
+      list_for_each_entry_safe(pf,nf,&frame_head,list)
       {
         strcpy(pf->dip,p[2]);
       }
@@ -368,6 +368,82 @@ parse_cmd (int sum, const char (*p)[STR_LEN])
     }
 }
 
+struct ip_route_for *
+look_up_route_by_dip (const char *dip)
+{
+  struct ip_route_for *p, *n;
+  list_for_each_entry_safe (p, n, &route_head,list)
+    {
+      if (strcmp(p->ip,dip) == 0)
+        {
+          return p;
+        }
+    }
+  return NULL;
+}
+
+struct int_tunnel *
+look_up_tunnel_dip_by_route_vint (int route_vint)
+{
+  struct int_tunnel *p, *n;
+  list_for_each_entry_safe (p, n, &tunnel_head,list)
+    {
+      if (p->id == route_vint)
+        {
+          return p;
+        }
+    }
+  return NULL;
+}
+
+struct arp *
+look_up_arp_rint_by_tunnel_dip (const char *tunnel_dip)
+{
+  struct arp *p, *n;
+  list_for_each_entry_safe (p, n, &arp_head,list)
+    {
+      if (strcmp(p->ip,tunnel_dip) == 0)
+        {
+          return p;
+        }
+    }
+  return NULL;
+}
+
+
+
+void output_file(void)
+{
+  struct in_frame *pf,*nf;
+  struct ip_route_for *pr,*nr;
+  struct int_tunnel *pi,*ni;
+  struct arp *pa,*na;
+  /*查找輸入表*/
+  list_for_each_entry_safe(pf,nf,&frame_head,list)
+  {
+    printf("%s\n",pf->dip);
+    pr = look_up_route_by_dip(pf->dip);
+    if(pr == NULL)
+      {
+        printf("pr NULL\n");
+        return;
+      }
+    pi = look_up_tunnel_dip_by_route_vint(pr->v_int);
+    if(pi == NULL)
+      {
+        printf("pi NULL\n");
+        return;
+      }
+    pa = look_up_arp_rint_by_tunnel_dip(pi->dip);
+    if(pa == NULL)
+      {
+        printf("pa NULL\n");
+        return;
+      }
+    printf("%s\n",pa->r_int);
+  }
+}
+
 int
 main (int argc, char **argv)
 {
@@ -402,5 +478,6 @@ main (int argc, char **argv)
       memset (buf, 0, sizeof(buf));
       memset (cmd, 0, sizeof(cmd));
     }
+  output_file();
   return 0;
 }
