@@ -30,7 +30,6 @@ enum
   NO_INT_TUNNEL,
   ADD_ROUTE,
   ADD_ARP,
-  ACTIVE,
   INPUT_FRAME,
 };
 
