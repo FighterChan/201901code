@@ -27,6 +27,37 @@ LIST_HEAD(arp_head);
 LIST_HEAD(zoneset_head);
 LIST_HEAD(zone_head);
 
+//#define SIZE 128
+/* 字符串获取字节序 */
+//static int get_network_byte (char *s)
+//{
+//    char buf[SIZE];
+//    struct in_addr p;
+//
+//    strcpy(buf,s);
+//    inet_pton(AF_INET,buf,(void *)&p);
+//
+//    return htonl(p.s_addr);
+//}
+//
+//static int match_address(char *prefix, char *dip, int offset)
+//{
+//
+//    char buf_pre[SIZE], buf_dip[SIZE], buf1[SIZE], buf2[SIZE];
+//    unsigned int n_pre, n_dip,n;
+//
+//    strcpy(buf_pre,prefix);
+//    strcpy(buf_dip,dip);
+//    n_pre = get_network_byte(buf_pre);
+//    n_dip = get_network_byte(buf_dip);
+//    n = n_dip - n_pre;
+//    if (n>0 && n<(1<<offset)) {
+//        return 1;
+//    }
+//
+//    return 0;
+//}
+
 int
 filename (char *infile, char *outfile)
 {
@@ -468,22 +499,7 @@ look_up_route_by_dip (const char *dip)
     {
 //      printf("route-> %s\n",p->ip);
 //      printf("dip-> %s\n",dip);
-
-//      memset(ip,0,sizeof(ip));
-//      ps = p->ip;
-//      i = 0;
-//      while ((token = strsep (&ps, "/")) != NULL)
-//        {
-//          if (i != 0)
-//            {
-//              mask = atoi(token);
-//            }
-//          else
-//            {
-//              strcpy(ip,token);
-//            }
-//          i++;
-//        }
+//      match_address();
       if (strcmp (p->ip, dip) == 0)
         {
           return p;
@@ -543,11 +559,12 @@ output_file (char *path)
       printf ("frame in sip ->%s\n", pf->sip);
       printf ("frame in dip ->%s\n", pf->dip);
       /* 检查frame in 是否合法 */
-      if (pf->sip != NULL && pf->dip != NULL
-          && check_frame_in (pf->sip, pf->dip) < 0)
+      if (check_frame_in (pf->sip, pf->dip) < 0)
         {
           printf ("frame in error\n");
-          return;
+          printf ("\t=> frame %d DROP\n", pf->id);
+          fprintf (fp, "%s %d %s\n", "frame", pf->id, "DROP");
+          continue;
         }
       /* 通过输入表项dip查找ip转发表 */
       pr = look_up_route_by_dip (pf->dip);
