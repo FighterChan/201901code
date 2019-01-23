@@ -26,11 +26,14 @@ LIST_HEAD(arp_head);
 
 LIST_HEAD(zoneset_head);
 LIST_HEAD(zone_head);
-LIST_HEAD(mem_head);
 
 int
 filename (char *infile, char *outfile)
 {
+  if (infile == NULL || outfile == NULL)
+    {
+      return -1;
+    }
   char *token;
   char *outpath = outfile;
   if ((token = strsep (&infile, ".")) != NULL)
@@ -44,10 +47,46 @@ filename (char *infile, char *outfile)
   return 0;
 }
 
+/* 建立一个zone节点，并初始化挂在该zone下的一个member链表 */
+void
+create_zone (const char (*p)[STR_LEN], void *data)
+{
+
+  struct zone *pzone;
+  pzone = (struct zone *) malloc (sizeof(struct zone));
+  if (pzone == NULL)
+    {
+      return;
+    }
+  pzone->id = atoi (p[1]);
+  INIT_LIST_HEAD (&pzone->mem_head);
+  list_add_tail (&pzone->list, &zone_head);
+}
+
+/* 建立一个member节点 */
+void
+add_member (const char (*p)[STR_LEN], void *data)
+{
+  struct zone_mem *pmem;
+  pmem = (struct zone_mem *) malloc (sizeof(struct zone_mem));
+  if (pmem == NULL)
+    {
+      return;
+    }
+  strncpy (pmem->member, p[1], strlen (p[1]));
+  struct zone *pzone;
+  /* 找到最后插入的zone节点 */
+  pzone = list_last_entry(&zone_head, struct zone, list);
+  if (pzone == NULL)
+    {
+      return;
+    }
+  list_add_tail (&pmem->list, &pzone->mem_head);
+}
+
 void
 create_zoneset (const char (*p)[STR_LEN], void *data)
 {
-
   struct zoneset *pzoneset;
   pzoneset = (struct zoneset *) malloc (sizeof(struct zoneset));
   if (pzoneset == NULL)
@@ -62,7 +101,88 @@ create_zoneset (const char (*p)[STR_LEN], void *data)
   pzoneset->active = UNACTIVE;
   /* 把zoneset节点加入链表 */
   list_add_tail (&pzoneset->list, &zoneset_head);
+}
 
+void
+add_zone (const char (*p)[STR_LEN], void *data)
+{
+  int id;
+  id = atoi (p[1]);
+  struct zoneset *pset;
+  pset = list_last_entry(&zoneset_head, struct zoneset, list);
+  if (pset == NULL)
+    {
+      return;
+    }
+  struct zone *newzone;
+  struct zone *pzone, *nzone;
+  list_for_each_entry_safe(pzone,nzone,&zone_head,list)
+    {
+      /* 找到匹配的zone */
+      if (pzone->id == id)
+        {
+          printf ("匹配 id = %d\n", id);
+          newzone = (struct zone *) malloc (sizeof(struct zone));
+          if (newzone == NULL)
+            {
+              return;
+            }
+          memcpy (newzone, pzone, sizeof(struct zone));
+          printf ("pzone->mem_head.next %p\n", pzone->mem_head.next);
+          printf ("newzone->mem_head.next %p\n", newzone->mem_head.next);
+          INIT_LIST_HEAD (&newzone->mem_head);
+          struct zone_mem *pmem;
+          struct zone_mem *pm;
+          list_for_each_entry(pm,&pzone->mem_head,list)
+            {
+              pmem = (struct zone_mem *) malloc (sizeof(struct zone_mem));
+              if (pmem == NULL)
+                {
+                  return;
+                }
+              memcpy (pmem, pm, sizeof(struct zone_mem));
+              list_add_tail (&pmem->list, &newzone->mem_head);
+            }
+        }
+    }
+  list_add_tail (&newzone->list, &pset->zone_head);
+}
+
+int
+check_frame_in (const char *sip, const char *dip)
+{
+  /* 暂时关闭这个函数 */
+//  return 0;
+  printf ("\nstart check frame in...\n");
+  struct zoneset *pset, *nset;
+  struct zone *pz, *nz;
+  struct zone_mem *pmem, *nmem;
+  int flg = -1;
+
+  list_for_each_entry_safe(pset,nset,&zoneset_head,list)
+    {
+      if (pset->active == ACTIVE)
+        {
+          printf ("zoneset id = %d\n", pset->id);
+          list_for_each_entry_safe(pz,nz,&pset->zone_head,list)
+            {
+
+              printf ("zone id = %d\n", pz->id);
+
+              list_for_each_entry_safe(pmem,nmem,&pz->mem_head,list)
+                {
+                  if (strcmp (sip, pmem->member) == 0
+                      || strcmp (dip, pmem->member) == 0)
+                    {
+                      flg = 0;
+                      printf ("sip = %s\n", sip);
+                      printf ("dip = %s\n", dip);
+                    }
+                }
+            }
+        }
+    }
+  return flg;
 }
 
 void
@@ -84,42 +204,6 @@ act_zoneset (const char (*p)[STR_LEN], void *data)
 }
 
 void
-create_zone (const char (*p)[STR_LEN], void *data)
-{
-
-  struct zone *pzone;
-  pzone = (struct zone *) malloc (sizeof(struct zone));
-  if (pzone == NULL)
-    {
-      return;
-    }
-  INIT_LIST_HEAD (&pzone->mem_head);
-  pzone->id = atoi (p[1]);
-  list_add_tail (&pzone->list, &zone_head);
-}
-
-void
-create_member (const char (*p)[STR_LEN], void *data)
-{
-
-  struct zone *pzone, *nzone;
-  struct zone_mem *pmem;
-  pmem = (struct zone_mem *) malloc (sizeof(struct zone_mem));
-  if (pmem == NULL)
-    {
-      return;
-    }
-  strncpy (pmem->member, p[1], strlen (p[1]));
-  /* 找到上次的zone区域 */
-  pzone = list_last_entry(&zone_head, struct zone, list);
-  if (pzone == NULL)
-    {
-      return;
-    }
-  list_add_tail (&pmem->list, &pzone->mem_head);
-}
-
-void
 del_member (const char (*p)[STR_LEN], void *data)
 {
 
@@ -129,25 +213,6 @@ void
 no_zone (const char (*p)[STR_LEN], void *data)
 {
 
-}
-
-void
-add_zone (const char (*p)[STR_LEN], void *data)
-{
-
-  struct zoneset *pzoneset;
-  struct zone *pzone;
-  pzone = (struct zone *) malloc (sizeof(struct zone));
-  if (pzone == NULL)
-    {
-      return;
-    }
-  pzone->id = atoi (p[1]);
-  pzoneset = list_last_entry(&zoneset_head, struct zoneset, list);
-  if (pzoneset == NULL)
-    {
-      return;
-    }
 }
 
 void
@@ -310,7 +375,7 @@ dip (const char (*p)[STR_LEN], void *data)
 struct cmd_table cmd_tables[] =
   {
     { "zone", 0, create_zone },
-    { "add-member", 0, create_member },
+    { "add-member", 0, add_member },
     { "del-member", 0, del_member },
     { "nozone", 0, no_zone },
     { "zoneset", 0, create_zoneset },
@@ -347,7 +412,7 @@ parse_cmd (int sum, const char (*p)[STR_LEN])
       sprintf (command + index, "%s", p[i]);
       index += strlen (p[i]);
     }
-#if 0
+#if 1
   printf ("%s %s %s %s\n", p[0], p[1], p[2], p[3]);
 #endif
 
@@ -456,39 +521,6 @@ look_up_arp_rint_by_tunnel_dip (const char *tunnel_dip)
   return NULL;
 }
 
-int
-check_frame_in (const char *sip, const char *dip)
-{
-  /* 暂时关闭这个函数 */
-  return 0;
-  struct zoneset *pset, *nset;
-  struct zone *pz, *nz;
-  struct zone_mem *pmem, *nmem;
-  int flg = -1;
-  list_for_each_entry_safe(pset,nset,&zoneset_head,list)
-    {
-      if (pset->active == ACTIVE)
-        {
-          printf ("%d\n", pset->id);
-          list_for_each_entry_safe(pz,nz,&pset->zone_head,list)
-            {
-
-              printf ("%d\n", pz->id);
-
-              list_for_each_entry_safe(pmem,nmem,&pz->mem_head,list)
-                {
-                  if (strcmp (sip, pmem->member) == 0
-                      && strcmp (dip, pmem->member) == 0)
-                    {
-                      flg = 0;
-                    }
-                }
-            }
-        }
-    }
-  return flg;
-}
-
 void
 output_file (char *path)
 {
@@ -508,6 +540,8 @@ output_file (char *path)
   /*查找輸入表*/
   list_for_each_entry_safe(pf,nf,&frame_head,list)
     {
+      printf ("frame in sip ->%s\n", pf->sip);
+      printf ("frame in dip ->%s\n", pf->dip);
       /* 检查frame in 是否合法 */
       if (pf->sip != NULL && pf->dip != NULL
           && check_frame_in (pf->sip, pf->dip) < 0)
@@ -648,7 +682,22 @@ main (int argc, char **argv)
       memset (cmd, 0, sizeof(cmd));
     }
   fclose (fp);
+  printf ("\n=====================\n");
+  /* 问题出在zone member */
+  struct zone *pz, *nz;
+  struct zone_mem *pzm, *nzm;
+  struct zoneset *pset;
+  list_for_each_entry(pset,&zoneset_head,list)
+    {
+      list_for_each_entry_safe(pz,nz,&pset->zone_head,list)
+        {
+          list_for_each_entry_safe(pzm,nzm,&pz->mem_head,list)
+            {
+              printf ("%s\n", pzm->member);
+            }
+        }
+    }
   output_file (argv[1]);
-  free_all ();
+//  free_all ();
   return 0;
 }

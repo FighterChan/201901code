@@ -12,7 +12,7 @@ enum
 
 enum
 {
-  UNACTIVE, AVTIVE
+  UNACTIVE, ACTIVE
 };
 
 enum
@@ -80,8 +80,8 @@ struct zone_mem
 
 struct zone
 {
-  struct list_head mem_head;
   int id;
+  struct list_head mem_head;
   struct list_head list;
 };
 
