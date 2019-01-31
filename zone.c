@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <arpa/inet.h>
 #include "zone.h"
 #include "list.h"
 
@@ -27,36 +28,39 @@ LIST_HEAD(arp_head);
 LIST_HEAD(zoneset_head);
 LIST_HEAD(zone_head);
 
-//#define SIZE 128
+#define SIZE 128
 /* 字符串获取字节序 */
-//static int get_network_byte (char *s)
-//{
-//    char buf[SIZE];
-//    struct in_addr p;
-//
-//    strcpy(buf,s);
-//    inet_pton(AF_INET,buf,(void *)&p);
-//
-//    return htonl(p.s_addr);
-//}
-//
-//static int match_address(char *prefix, char *dip, int offset)
-//{
-//
-//    char buf_pre[SIZE], buf_dip[SIZE], buf1[SIZE], buf2[SIZE];
-//    unsigned int n_pre, n_dip,n;
-//
-//    strcpy(buf_pre,prefix);
-//    strcpy(buf_dip,dip);
-//    n_pre = get_network_byte(buf_pre);
-//    n_dip = get_network_byte(buf_dip);
-//    n = n_dip - n_pre;
-//    if (n>0 && n<(1<<offset)) {
-//        return 1;
-//    }
-//
-//    return 0;
-//}
+static int
+get_network_byte (char *s)
+{
+  char buf[SIZE];
+  struct in_addr p;
+
+  strcpy (buf, s);
+  inet_pton (AF_INET, buf, (void *) &p);
+
+  return htonl (p.s_addr);
+}
+
+static int
+match_address (const char *prefix, const char *dip, int offset)
+{
+
+  char buf_pre[SIZE], buf_dip[SIZE], buf1[SIZE], buf2[SIZE];
+  unsigned int n_pre, n_dip, n;
+
+  strcpy (buf_pre, prefix);
+  strcpy (buf_dip, dip);
+  n_pre = get_network_byte (buf_pre);
+  n_dip = get_network_byte (buf_dip);
+  n = n_dip - n_pre;
+  if (n > 0 && n < (1 << offset))
+    {
+      return 1;
+    }
+
+  return 0;
+}
 
 int
 filename (char *infile, char *outfile)
@@ -188,10 +192,14 @@ check_frame_in (const char *sip, const char *dip)
   struct zoneset *pset, *nset;
   struct zone *pz, *nz;
   struct zone_mem *pmem, *nmem;
-  int flg = -1;
+  int id1 = 0;
+  int id2 = 0;
+  int lock1 = 0;
+  int lock2 = 0;
 
   list_for_each_entry_safe(pset,nset,&zoneset_head,list)
     {
+      /*一次只会生效一个zoneset,因此，ACTIVE就是唯一的*/
       if (pset->active == ACTIVE)
         {
           printf ("zoneset id = %d\n", pset->id);
@@ -202,18 +210,27 @@ check_frame_in (const char *sip, const char *dip)
 
               list_for_each_entry_safe(pmem,nmem,&pz->mem_head,list)
                 {
-                  if (strcmp (sip, pmem->member) == 0
-                      || strcmp (dip, pmem->member) == 0)
+                  if (lock1 == 0 && strcmp (sip, pmem->member) == 0)
                     {
-                      flg = 0;
-                      printf ("sip = %s\n", sip);
-                      printf ("dip = %s\n", dip);
+                      printf ("sip same = %s\n", sip);
+                      lock1 = 1;
+                      id1 = pz->id;
+                    }
+                  if (lock2 == 0 && strcmp (dip, pmem->member) == 0)
+                    {
+                      printf ("dip same = %s\n", dip);
+                      lock2 = 1;
+                      id2 = pz->id;
+                    }
+                  if (lock1 == 1 && lock2 == 1 && id1 == id2)
+                    {
+                      return 0;
                     }
                 }
             }
         }
     }
-  return flg;
+  return -1;
 }
 
 void
@@ -497,9 +514,6 @@ look_up_route_by_dip (const char *dip)
   memset (ip, 0, sizeof(ip));
   list_for_each_entry_safe (p, n, &route_head,list)
     {
-//      printf("route-> %s\n",p->ip);
-//      printf("dip-> %s\n",dip);
-//      match_address();
       if (strcmp (p->ip, dip) == 0)
         {
           return p;
@@ -699,21 +713,6 @@ main (int argc, char **argv)
       memset (cmd, 0, sizeof(cmd));
     }
   fclose (fp);
-  printf ("\n=====================\n");
-  /* 问题出在zone member */
-  struct zone *pz, *nz;
-  struct zone_mem *pzm, *nzm;
-  struct zoneset *pset;
-  list_for_each_entry(pset,&zoneset_head,list)
-    {
-      list_for_each_entry_safe(pz,nz,&pset->zone_head,list)
-        {
-          list_for_each_entry_safe(pzm,nzm,&pz->mem_head,list)
-            {
-              printf ("%s\n", pzm->member);
-            }
-        }
-    }
   output_file (argv[1]);
 //  free_all ();
   return 0;

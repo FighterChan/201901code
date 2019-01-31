@@ -1,2 +1,2 @@
-frame 1 DROP
+frame 1 ten0/1
 frame 2 DROP

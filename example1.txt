@@ -10,7 +10,7 @@ add-zone 2
 int tunnel 1
 sip = 1.1.1.1
 dip = 2.2.2.2
-add-route 20.0.0.0/24 tunnel 1
+add-route 20.0.0.1 tunnel 1
 add-arp 2.2.2.2 0000.0000.0001 ten0/1
 active zoneset 1
 input-frame 1
