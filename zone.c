@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include "zone.h"
 #include "list.h"
+#include "ip_match.h"
 
 char cmd[STR_LEN][STR_LEN];
 int ctr_type = INPUT_FRAME_MODE;
@@ -510,11 +511,16 @@ look_up_route_by_dip (const char *dip)
   char *ps;
   int mask = 0;
   int i;
-  char ip[16];
-  memset (ip, 0, sizeof(ip));
+  struct prefix prefix1,prefix2;
+  memset (&prefix1, 0, sizeof(struct prefix));
+  memset (&prefix2, 0, sizeof(struct prefix));
+
   list_for_each_entry_safe (p, n, &route_head,list)
     {
-      if (strcmp (p->ip, dip) == 0)
+      str2prefix_ipv4(p->ip,&prefix1);
+      str2prefix_ipv4(dip,&prefix2);
+
+      if (prefix_cmp (&prefix1, &prefix2) == 0)
         {
           return p;
         }

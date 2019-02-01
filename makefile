@@ -1,6 +1,6 @@
 EXE = zone.elf
-OBJ = zone.o 
-SRC = zone.c 
+OBJ = zone.o ip_match.o
+SRC = zone.c ip_match.c
 CC = gcc
 CFLAGS = -g
 LDFLAGS =
