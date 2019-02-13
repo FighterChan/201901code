@@ -82,6 +82,65 @@ filename (char *infile, char *outfile)
     }
   return 0;
 }
+void
+swap (struct list_head *a, struct list_head *b)
+{
+  struct list_head flag =
+    { NULL, NULL };
+  __list_add (&flag, b->prev, b);
+  list_del (b);
+  __list_add (b, a->prev, a);
+  list_del (a);
+  __list_add (a, flag.prev, &flag);
+  list_del (&flag);
+}
+
+void
+insert_sort (struct list_head *head, int
+(*cmp) (struct list_head *a, struct list_head *b))
+{
+
+  struct list_head *i, *j, *temp;
+  i = head->next->next;   //i指向第2个结点
+  list_for_each_from(i,head)
+    { //i从第2个结点开始遍历,因为第1个已经有序
+      j = i->prev;  //j指向i的前一个结点
+
+      if (cmp (j, i) > 0) //从表头开始，按照降序排列
+        continue;
+      list_for_each_reverse_continue(j,head)
+        {
+          if (cmp (j, i) > 0)
+            break;
+        }
+      temp = i->next; //因为下文要删除i结点，所以记录i结点的下一个结点
+      list_del (i);
+      __list_add (i, j, j->next); //把i插入到j的后面
+      i = temp->prev; //i指针归位
+    }
+}
+int
+cmp_ip (struct list_head *a, struct list_head *b)
+{
+  struct prefix_ipv4 prefix1,prefix2;
+  memset (&prefix1, 0, sizeof(struct prefix_ipv4));
+  memset (&prefix2, 0, sizeof(struct prefix_ipv4));
+  struct ip_route_for *pa = list_entry(a, struct ip_route_for, list);
+  struct ip_route_for *pb = list_entry(b, struct ip_route_for, list);
+  str2prefix_ipv4(pa->ip,&prefix1);
+  str2prefix_ipv4(pb->ip,&prefix2);
+  return (prefix1.prefixlen - prefix2.prefixlen);
+}
+
+int
+list_add_sort (struct ip_route_for *new,struct list_head *head)
+{
+  list_add_tail (&new->list, head);
+
+  insert_sort(head,cmp_ip);
+
+  return 0;
+}
 
 /* 建立一个zone节点，并初始化挂在该zone下的一个member链表 */
 void
@@ -277,6 +336,21 @@ nozone_set (const char (*p)[STR_LEN], void *data)
 }
 
 void
+no_int_tunnel (const char (*p)[STR_LEN], void *data)
+{
+  struct int_tunnel *pi,*ni;
+  list_for_each_entry_safe(pi,ni,&tunnel_head,list)
+  {
+    if(atoi(p[3]) == pi->id)
+      {
+        list_del_init(&pi->list);
+        free(pi);
+        pi = NULL;
+      }
+  }
+}
+
+void
 int_tunnel (const char (*p)[STR_LEN], void *data)
 {
 
@@ -304,7 +378,8 @@ add_route (const char (*p)[STR_LEN], void *data)
     }
   strcpy (pr->ip, p[1]);
   pr->v_int = atoi (p[3]);
-  list_add_tail (&pr->list, &route_head);
+  /*此处按ip字段排序*/
+  list_add_sort (pr, &route_head);
 }
 
 void
@@ -433,6 +508,7 @@ struct cmd_table cmd_tables[] =
     { "nozoneset", 0, nozone_set },
     { "activezoneset", 0, act_zoneset },
     { "inttunnel", 0, int_tunnel },
+    { "nointtunnel", 0, no_int_tunnel },
     { "add-route", 0, add_route },
     { "del-route", 0, del_route },
     { "add-arp", 0, add_arp },
@@ -511,16 +587,21 @@ look_up_route_by_dip (const char *dip)
   char *ps;
   int mask = 0;
   int i;
-  struct prefix prefix1,prefix2;
-  memset (&prefix1, 0, sizeof(struct prefix));
-  memset (&prefix2, 0, sizeof(struct prefix));
+  struct prefix_ipv4 prefix1,prefix2;
+  memset (&prefix1, 0, sizeof(struct prefix_ipv4));
+  memset (&prefix2, 0, sizeof(struct prefix_ipv4));
 
   list_for_each_entry_safe (p, n, &route_head,list)
     {
+      printf("--->>> dip : %s\n",dip);
+      printf("--->>> p : %s\n",p->ip);
+
+      /* IP 转发表 */
       str2prefix_ipv4(p->ip,&prefix1);
+      /* 输入表项 */
       str2prefix_ipv4(dip,&prefix2);
 
-      if (prefix_cmp (&prefix1, &prefix2) == 0)
+      if((prefix1.prefix.s_addr >> (32 - prefix1.prefixlen)) == (prefix2.prefix.s_addr >> (32 - prefix1.prefixlen)))
         {
           return p;
         }
@@ -595,6 +676,7 @@ output_file (char *path)
           fprintf (fp, "%s %d %s\n", "frame", pf->id, "DROP");
           continue;
         }
+      printf("\n==========pr->ip:%s,pr->v_int:%d\n",pr->ip,pr->v_int);
       /* 通过ip转发表的虚拟接口查找隧道dip */
       pi = look_up_tunnel_dip_by_route_vint (pr->v_int);
       if (pi == NULL)
@@ -603,6 +685,7 @@ output_file (char *path)
           fprintf (fp, "%s %d %s\n", "frame", pf->id, "DROP");
           continue;
         }
+      printf("\n==========pi->dip:%s\n",pi->dip);
       /* 通过隧道dip查找arp表的真实出接口 */
       pa = look_up_arp_rint_by_tunnel_dip (pi->dip);
       if (pa == NULL)
@@ -719,6 +802,11 @@ main (int argc, char **argv)
       memset (cmd, 0, sizeof(cmd));
     }
   fclose (fp);
+  struct ip_route_for *pr;
+  list_for_each_entry(pr,&route_head,list)
+  {
+    printf("++++++%s\n",pr->ip);
+  }
   output_file (argv[1]);
 //  free_all ();
   return 0;

@@ -11,6 +11,7 @@
 
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
@@ -41,17 +42,18 @@ str2prefix_ipv4 (const char *str, struct prefix_ipv4 *p)
   /* String doesn't contail slash. */
   if (pnt == NULL)
     {
+      printf ("pnt == NULL :  %s\n", str);
       /* Convert string to prefix. */
       ret = inet_pton (AF_INET, str, &p->prefix);
       if (ret <= 0)
         return 0;
-
       p->family = AF_INET;
 
       /* Natural Mask is derived for network without a mask */
       network = ntohl (p->prefix.s_addr);
-
-      if (network == 0)
+      p->prefix.s_addr = network;
+      printf ("inet_pton network = %x\n", p->prefix.s_addr);
+      if (p->prefix.s_addr  == 0)
         {
           p->prefixlen = 0;
           return 1;
@@ -84,10 +86,13 @@ str2prefix_ipv4 (const char *str, struct prefix_ipv4 *p)
         return 0;
       else
         return 0;
+      printf ("p->prefixlen = %d\n", p->prefixlen);
       return 1;
     }
   else
     {
+      printf ("pnt != NULL :  %s\n", str);
+
       alloc = (pnt - str) + 1;
       cp = (char *) malloc (alloc);
       if (cp == NULL)
@@ -95,18 +100,22 @@ str2prefix_ipv4 (const char *str, struct prefix_ipv4 *p)
 
       strncpy (cp, str, pnt - str);
       *(cp + (pnt - str)) = '\0';
+      printf ("cp:%s\n", cp);
       ret = inet_pton (AF_INET, cp, &p->prefix);
       free (cp);
 
       if (ret <= 0)
         return 0;
-
+      network = ntohl (p->prefix.s_addr);
+      p->prefix.s_addr = network;
+      printf ("inet_pton network = %x\n", p->prefix.s_addr);
       /* Get prefix length. */
       plen = (unsigned char) strtoul (++pnt, NULL, 10);
       if (plen > 32)
         return 0;
-
+      p->family = AF_INET;
       p->prefixlen = (unsigned char) plen;
+      printf ("p->prefixlen = %d\n", p->prefixlen);
     }
 
   return 1;
